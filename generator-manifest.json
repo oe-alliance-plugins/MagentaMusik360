@@ -1,0 +1,24 @@
+{
+  "depends": "",
+  "description": "MagentaMusik360 Plugin",
+  "legacy_setup": {
+    "description": "MagentaMusik360 Plugin",
+    "has_setup_translate": false,
+    "name": "enigma2-plugin-extensions-magentamusik360",
+    "package_data": [],
+    "package_dir_value": "",
+    "packages": [],
+    "pkg": "Extensions.MagentaMusik360",
+    "version": "1.0"
+  },
+  "module_dir_name": "MagentaMusik360",
+  "package_name": "enigma2-plugin-extensions-magentamusik360",
+  "plugin_group": "extensions",
+  "source_repo_branch": "python3",
+  "source_repo_name": "e2openplugin-MagentaMusik360",
+  "source_repo_url": "https://github.com/E2OpenPlugins/e2openplugin-MagentaMusik360.git",
+  "target_repo_branch": "main",
+  "target_repo_name": "MagentaMusik360",
+  "target_repo_url": "git@github.com:oe-alliance-plugins/MagentaMusik360.git",
+  "version": "1.0"
+}

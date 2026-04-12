@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import absolute_import
-
 from skin import loadSkin
 from Plugins.Plugin import PluginDescriptor
 from Screens.Screen import Screen
@@ -39,26 +36,12 @@ if getDesktop(0).size().width() <= 1280:
 else:
 	loadSkin(resolveFilename(SCOPE_PLUGINS) + "Extensions/MagentaMusik360/skin_fhd.xml")
 
-try:
-	from enigma import eMediaDatabase
-	magentamusik_isDreamOS = True
-
-	import ssl
-	try:
-		_create_unverified_https_context = ssl._create_unverified_context
-	except AttributeError:
-		pass
-	else:
-		ssl._create_default_https_context = _create_unverified_https_context
-
-except:
-	magentamusik_isDreamOS = False
+magentamusik_isDreamOS = False
 
 #==== workaround for TLSv1_2 with DreamOS =======
 from OpenSSL import SSL
 from twisted.internet.ssl import ClientContextFactory
-
-from six.moves import urllib
+from urllib import request as urllib_request, error as urllib_error
 
 
 try:
@@ -70,12 +53,14 @@ except ImportError:
 
 config.plugins.magentamusik360 = ConfigSubsection()
 # Some images like DreamOS need streams with fix quality
-config.plugins.magentamusik360.fix_stream_quality = ConfigYesNo(default = magentamusik_isDreamOS)
+config.plugins.magentamusik360.fix_stream_quality = ConfigYesNo(default = False)
 config.plugins.magentamusik360.stream_quality = ConfigSelection(default = "2", choices = [("0", _("sehr gering")), ("1", _("gering")), ("2", _("mittel")), ("3", _("hoch")), ("4", _("sehr hoch"))])
 
 
 def loadMagentaMusikJsonData(screen, statusField, buildListFunc, data):
 	try:
+		if isinstance(data, bytes):
+			data = data.decode('utf-8', 'replace')
 		jsonResult = json.loads(data)
 
 		buildListFunc(jsonResult)
@@ -111,7 +96,9 @@ def downloadMagentaMusikJson(url, callback, errorCallback):
 
 		contextFactory = WebClientContextFactory()
 		agent = Agent(reactor, contextFactory)
-	d = agent.request(b'GET', url, Headers({'user-agent': ['Twisted']}))
+	if isinstance(url, str):
+		url = url.encode('utf-8')
+	d = agent.request(b'GET', url, Headers({b'user-agent': [b'Twisted']}))
 	d.addCallback(boundFunction(handleMagentaMusikWebsiteResponse, callback))
 	d.addErrback(errorCallback)
 
@@ -227,14 +214,14 @@ class MagentaMusik360EventScreen(Screen):
 
 	def getStreamUrl(self, url):
 		try:
-			response = urllib.request.urlopen(url).read()
+			response = urllib_request.urlopen(url).read()
 			namespace = { 'ns0': 'http://www.w3.org/ns/SMIL' }
 			xmlroot = ET.ElementTree(ET.fromstring(response))
 			playlisturl = xmlroot.find('ns0:body/ns0:seq/ns0:media', namespace).get('src')
 			return playlisturl, 0
-		except urllib.error.HTTPError as e:
+		except urllib_error.HTTPError as e:
 			return '', e.code
-		except urllib.error.URLError as e2:
+		except urllib_error.URLError as e2:
 			if 'CERTIFICATE_VERIFY_FAILED' in str(e2.reason):
 				return '', -2
 			return '', -1
@@ -250,8 +237,9 @@ class MagentaMusik360EventScreen(Screen):
 		try:
 			attributeListPattern = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
 			streams = []
-			lines = urllib.request.urlopen(m3u8_url).readlines()
-			if len(lines) > 0 and lines[0] == '#EXTM3U\r\n':
+			lines = urllib_request.urlopen(m3u8_url).readlines()
+			lines = [line.decode('utf-8', 'replace') if isinstance(line, bytes) else line for line in lines]
+			if len(lines) > 0 and lines[0].strip() == '#EXTM3U':
 				i = 1
 				count_lines = len(lines)
 				while i < len(lines) - 1:
@@ -334,11 +322,11 @@ class MagentaMusik360EventScreen(Screen):
 		try:
 			for season in jsonData['content']['series']['seasons']:
 				url = season['season']['details']['href']
-				response = urllib.request.urlopen(url).read()
+				response = urllib_request.urlopen(url).read()
 				data = json.loads(response)
 				for episode in data['content']['season']['episodes']:
 					if episode['movie']['flag']['name'] == 'mmStage':
-						url = episode['movie']['features'][0]['player']['href'].encode('utf8')
+						url = episode['movie']['features'][0]['player']['href']
 						downloadMagentaMusikJson(url, boundFunction(loadMagentaMusikJsonData, 'Event', self['status'], self.buildScreen), boundFunction(handleMagentaMusikDownloadError, 'Event', self['status']))
 						return
 		except Exception as e:
@@ -408,7 +396,7 @@ class MagentaMusik360SectionScreen(Screen):
 						origTitle = movies['movie']['originalTitle']
 						if origTitle == title:
 							origTitle = ''
-					url = movies['movie']['player']['href'].encode('utf8')
+					url = movies['movie']['player']['href']
 					if 'seriesTitle' in movies['movie']:
 						seriesTitle = movies['movie']['seriesTitle']
 					self.sectionList.append((title, origTitle, seriesTitle, 'teaser', url))
@@ -449,7 +437,7 @@ class MagentaMusik360MainScreen(Screen):
 
 	version = 'v1.0.1'
 
-	base_url = b'https://wcss.t-online.de/cvss/magentamusic/vodplayer/v3/structuredgrid/58948?$whiteLabelId=MM2'
+	base_url = 'https://wcss.t-online.de/cvss/magentamusic/vodplayer/v3/structuredgrid/58948?$whiteLabelId=MM2'
 	title = 'MagentaMusik 360'
 
 	def __init__(self, session, args = None):
@@ -490,10 +478,10 @@ class MagentaMusik360MainScreen(Screen):
 					if group['groupType'] == 'smallTeaser':
 						if len(group['items']) == 1:
 							title = group['items'][0]['teaser']['header']
-							self.contentlist.append((title, group['items'][0]['teaser']['target']['href'].encode('utf8')))
+							self.contentlist.append((title, group['items'][0]['teaser']['target']['href']))
 					elif group['groupType'] == 'assetList':
 						title = group['title']
-						self.contentlist.append((title, group['showAll']['href'].encode('utf8')))
+						self.contentlist.append((title, group['showAll']['href']))
 		except Exception as e:
 			self['status'].setText('Bitte Pluginentwickler informieren:\nMagentaMusik360MainScreen ' + str(e))
 			return
@@ -528,10 +516,10 @@ class MagentaMusik360MainScreen(Screen):
 	def checkForUpdate(self):
 		url = 'https://api.github.com/repos/E2OpenPlugins/e2openplugin-MagentaMusik360/releases'
 		header = { 'Accept' : 'application/vnd.github.v3+json' }
-		req = urllib.request.Request(url, None, header)
+		req = urllib_request.Request(url, None, header)
 		try:
-			response = urllib.request.urlopen(req)
-			jsonData = json.loads(response.read())
+			response = urllib_request.urlopen(req)
+			jsonData = json.loads(response.read().decode('utf-8', 'replace'))
 
 			for rel in jsonData:
 				if rel['target_commitish'] != 'master':
@@ -539,13 +527,8 @@ class MagentaMusik360MainScreen(Screen):
 				if self.version < rel['tag_name']:
 					self.updateText = rel['body']
 					for asset in rel['assets']:
-						if magentamusik_isDreamOS and asset['name'].endswith('.deb'):
-							self.updateUrl = asset['browser_download_url'].encode('utf8')
-							self.filename = '/tmp/enigma2-plugin-extensions-magentamusik360.deb'
-							self['buttongreen'].show()
-							break
-						elif (not magentamusik_isDreamOS) and asset['name'].endswith('.ipk'):
-							self.updateUrl = asset['browser_download_url'].encode('utf8')
+						if asset['name'].endswith('.ipk'):
+							self.updateUrl = asset['browser_download_url']
 							self.filename = '/tmp/enigma2-plugin-extensions-magentamusik360.ipk'
 							self['buttongreen'].show()
 							break
@@ -568,12 +551,8 @@ class MagentaMusik360MainScreen(Screen):
 	def downloadFinished(self):
 		self.downloader.stop()
 		self.container = eConsoleAppContainer()
-		if magentamusik_isDreamOS:
-			self.container.appClosed_conn = self.container.appClosed.connect(self.updateFinished)
-			self.container.execute('dpkg -i ' + self.filename)
-		else:
-			self.container.appClosed.append(self.updateFinished)
-			self.container.execute('opkg update; opkg install ' + self.filename)
+		self.container.appClosed.append(self.updateFinished)
+		self.container.execute('opkg update; opkg install ' + self.filename)
 
 	def updateFailed(self, reason, status):
 		self.updateFinished(1)
