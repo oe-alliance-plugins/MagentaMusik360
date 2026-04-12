@@ -42,6 +42,7 @@ class MagentMusik360HTTPProgressDownloader(client.HTTPDownloader):
 			self.end_callback()
 		return ret
 
+
 class MagentMusik360DownloadWithProgress:
 	def __init__(self, url, outputfile, contextFactory=None, *args, **kwargs):
 		parsed = urlparse(url)

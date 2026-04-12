@@ -53,8 +53,8 @@ except ImportError:
 
 config.plugins.magentamusik360 = ConfigSubsection()
 # Some images like DreamOS need streams with fix quality
-config.plugins.magentamusik360.fix_stream_quality = ConfigYesNo(default = False)
-config.plugins.magentamusik360.stream_quality = ConfigSelection(default = "2", choices = [("0", _("sehr gering")), ("1", _("gering")), ("2", _("mittel")), ("3", _("hoch")), ("4", _("sehr hoch"))])
+config.plugins.magentamusik360.fix_stream_quality = ConfigYesNo(default=False)
+config.plugins.magentamusik360.stream_quality = ConfigSelection(default="2", choices=[("0", _("sehr gering")), ("1", _("gering")), ("2", _("mittel")), ("3", _("hoch")), ("4", _("sehr hoch"))])
 
 
 def loadMagentaMusikJsonData(screen, statusField, buildListFunc, data):
@@ -67,13 +67,16 @@ def loadMagentaMusikJsonData(screen, statusField, buildListFunc, data):
 	except Exception as e:
 		statusField.setText(screen + ': Fehler beim Laden der JSON Daten "' + str(e) + '"')
 
+
 def handleMagentaMusikWebsiteResponse(callback, response):
 	d = readBody(response)
 	d.addCallback(callback)
 	return d
 
+
 def handleMagentaMusikDownloadError(screen, statusField, err):
 	statusField.setText(screen + ': Fehler beim Download "' + str(err) + '"')
+
 
 def downloadMagentaMusikJson(url, callback, errorCallback):
 	if magentamusik_isDreamOS == False:
@@ -90,7 +93,7 @@ def downloadMagentaMusikJson(url, callback, errorCallback):
 				# Enable all workarounds to SSL bugs as documented by
 				# http://www.openssl.org/docs/ssl/SSL_CTX_set_options.html
 				ctx.set_options(SSL.OP_ALL)
-				if hostname and ClientTLSOptions is not None: # workaround for TLS SNI
+				if hostname and ClientTLSOptions is not None:  # workaround for TLS SNI
 					ClientTLSOptions(hostname, ctx)
 				return ctx
 
@@ -106,7 +109,7 @@ def downloadMagentaMusikJson(url, callback, errorCallback):
 class MagentaMusik360MainScreenSummary(SetupSummary):
 
 	def __init__(self, session, parent):
-		SetupSummary.__init__(self, session, parent = parent)
+		SetupSummary.__init__(self, session, parent=parent)
 		self.skinName = 'SetupSummary'
 		self.onShow.append(self.addWatcher)
 		self.onHide.append(self.removeWatcher)
@@ -215,7 +218,7 @@ class MagentaMusik360EventScreen(Screen):
 	def getStreamUrl(self, url):
 		try:
 			response = urllib_request.urlopen(url).read()
-			namespace = { 'ns0': 'http://www.w3.org/ns/SMIL' }
+			namespace = {'ns0': 'http://www.w3.org/ns/SMIL'}
 			xmlroot = ET.ElementTree(ET.fromstring(response))
 			playlisturl = xmlroot.find('ns0:body/ns0:seq/ns0:media', namespace).get('src')
 			return playlisturl, 0
@@ -246,16 +249,16 @@ class MagentaMusik360EventScreen(Screen):
 					if lines[i].startswith('#EXT-X-STREAM-INF:'):
 						bandwith = self.readExtXStreamInfLine(lines[i], attributeListPattern)
 						if bandwith and i + 1 < count_lines:
-							streams.append((int(bandwith), lines[i+1].strip()))
+							streams.append((int(bandwith), lines[i + 1].strip()))
 					i += 1
 				if streams:
-					streams.sort(key = lambda x : x[0])
+					streams.sort(key=lambda x: x[0])
 					if len(streams) != 5:
 						print('Warning: %d streams in m3u8. 5 expected' % len(streams))
 						if int(config.plugins.magentamusik360.stream_quality.value) < 2:
 							return streams[0][1]
 						else:
-							return streams[len(streams)-1][1]
+							return streams[len(streams) - 1][1]
 					return streams[int(config.plugins.magentamusik360.stream_quality.value)][1]
 			return ''
 		except:
@@ -281,8 +284,8 @@ class MagentaMusik360EventScreen(Screen):
 			if url:
 				if url[0:4] == 'http':
 					playlisturl = url
-				else: # relative url
-					playlisturl = playlisturl[0 : playlisturl.find('/index.m3u8') + 1] + url
+				else:  # relative url
+					playlisturl = playlisturl[0: playlisturl.find('/index.m3u8') + 1] + url
 
 		ref = eServiceReference(4097, 0, playlisturl)
 		ref.setName(title)
@@ -440,7 +443,7 @@ class MagentaMusik360MainScreen(Screen):
 	base_url = 'https://wcss.t-online.de/cvss/magentamusic/vodplayer/v3/structuredgrid/58948?$whiteLabelId=MM2'
 	title = 'MagentaMusik 360'
 
-	def __init__(self, session, args = None):
+	def __init__(self, session, args=None):
 		Screen.__init__(self, session)
 		self.session = session
 
@@ -515,7 +518,7 @@ class MagentaMusik360MainScreen(Screen):
 	# for update
 	def checkForUpdate(self):
 		url = 'https://api.github.com/repos/E2OpenPlugins/e2openplugin-MagentaMusik360/releases'
-		header = { 'Accept' : 'application/vnd.github.v3+json' }
+		header = {'Accept': 'application/vnd.github.v3+json'}
 		req = urllib_request.Request(url, None, header)
 		try:
 			response = urllib_request.urlopen(req)
@@ -539,7 +542,7 @@ class MagentaMusik360MainScreen(Screen):
 
 	def update(self):
 		if self.updateUrl:
-			self.session.openWithCallback(self.updateConfirmed, MessageBox, 'Ein Update ist verfügbar. Wollen sie es installieren?\nInformationen:\n' + self.updateText, MessageBox.TYPE_YESNO, default = False)
+			self.session.openWithCallback(self.updateConfirmed, MessageBox, 'Ein Update ist verfügbar. Wollen sie es installieren?\nInformationen:\n' + self.updateText, MessageBox.TYPE_YESNO, default=False)
 
 	def updateConfirmed(self, answer):
 		if answer:
@@ -561,7 +564,7 @@ class MagentaMusik360MainScreen(Screen):
 		self['buttongreen'].hide()
 		self.updateUrl = ''
 		if retval == 0:
-			self.session.openWithCallback(self.restartE2, MessageBox, 'Das MagentaMusik360 Plugin wurde erfolgreich installiert!\nSoll das E2 GUI neugestartet werden?', MessageBox.TYPE_YESNO, default = False)
+			self.session.openWithCallback(self.restartE2, MessageBox, 'Das MagentaMusik360 Plugin wurde erfolgreich installiert!\nSoll das E2 GUI neugestartet werden?', MessageBox.TYPE_YESNO, default=False)
 		else:
 			self.session.open(MessageBox, 'Bei der Installation ist ein Problem aufgetreten.', MessageBox.TYPE_ERROR)
 
@@ -573,5 +576,6 @@ class MagentaMusik360MainScreen(Screen):
 def main(session, **kwargs):
 	session.open(MagentaMusik360MainScreen)
 
+
 def Plugins(**kwargs):
-	return PluginDescriptor(name='MagentaMusik360', description=_('MagentaMusik 360 Plugin'), where = PluginDescriptor.WHERE_PLUGINMENU, icon='plugin.png', fnc=main)
+	return PluginDescriptor(name='MagentaMusik360', description=_('MagentaMusik 360 Plugin'), where=PluginDescriptor.WHERE_PLUGINMENU, icon='plugin.png', fnc=main)
