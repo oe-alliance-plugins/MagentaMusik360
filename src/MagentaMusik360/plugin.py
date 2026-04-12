@@ -5,27 +5,21 @@ from Screens.Screen import Screen
 from Screens.InfoBarGenerics import InfoBarMenu, InfoBarSeek, InfoBarNotifications, InfoBarServiceNotifications, InfoBarShowHide, InfoBarSimpleEventView, InfoBarServiceErrorPopupSupport
 from Screens.MessageBox import MessageBox
 from Screens.Standby import TryQuitMainloop
-from Screens.VirtualKeyBoard import VirtualKeyBoard
 from Screens.Setup import SetupSummary
 from Components.ActionMap import ActionMap
 from Components.ServiceEventTracker import InfoBarBase
 from Components.Sources.List import List
 from Components.Label import Label
-from Components.MultiContent import MultiContentEntryText, MultiContentEntryProgress
-from Components.ConfigList import ConfigListScreen
-from Components.config import config, getConfigListEntry, ConfigSubsection, ConfigText, ConfigPassword, ConfigInteger, ConfigNothing, ConfigYesNo, ConfigSelection, NoSave
+from Components.config import config, ConfigSubsection, ConfigYesNo, ConfigSelection
 from Tools.BoundFunction import boundFunction
 from Tools.Directories import resolveFilename, SCOPE_PLUGINS
 from .downloader import MagentMusik360DownloadWithProgress
 
-from enigma import eTimer, eListboxPythonMultiContent, gFont, eEnv, eServiceReference, getDesktop, eConsoleAppContainer
+from enigma import eServiceReference, getDesktop, eConsoleAppContainer
 
 import xml.etree.ElementTree as ET
-import time
 import json
-import base64
 import re
-from datetime import datetime
 from twisted.web.client import Agent, readBody
 from twisted.internet import reactor
 from twisted.web.http_headers import Headers
@@ -36,19 +30,8 @@ if getDesktop(0).size().width() <= 1280:
 else:
 	loadSkin(resolveFilename(SCOPE_PLUGINS) + "Extensions/MagentaMusik360/skin_fhd.xml")
 
-magentamusik_isDreamOS = False
-
-#==== workaround for TLSv1_2 with DreamOS =======
-from OpenSSL import SSL
-from twisted.internet.ssl import ClientContextFactory
 from urllib import request as urllib_request, error as urllib_error
 
-
-try:
-	# available since twisted 14.0
-	from twisted.internet._sslverify import ClientTLSOptions
-except ImportError:
-	ClientTLSOptions = None
 #================================================
 
 config.plugins.magentamusik360 = ConfigSubsection()
@@ -79,26 +62,7 @@ def handleMagentaMusikDownloadError(screen, statusField, err):
 
 
 def downloadMagentaMusikJson(url, callback, errorCallback):
-	if magentamusik_isDreamOS == False:
-		agent = Agent(reactor)
-	else:
-		class WebClientContextFactory(ClientContextFactory):
-			"A SSL context factory which is more permissive against SSL bugs."
-
-			def __init__(self):
-				self.method = SSL.SSLv23_METHOD
-
-			def getContext(self, hostname=None, port=None):
-				ctx = ClientContextFactory.getContext(self)
-				# Enable all workarounds to SSL bugs as documented by
-				# http://www.openssl.org/docs/ssl/SSL_CTX_set_options.html
-				ctx.set_options(SSL.OP_ALL)
-				if hostname and ClientTLSOptions is not None:  # workaround for TLS SNI
-					ClientTLSOptions(hostname, ctx)
-				return ctx
-
-		contextFactory = WebClientContextFactory()
-		agent = Agent(reactor, contextFactory)
+	agent = Agent(reactor)
 	if isinstance(url, str):
 		url = url.encode('utf-8')
 	d = agent.request(b'GET', url, Headers({b'user-agent': [b'Twisted']}))
@@ -261,7 +225,7 @@ class MagentaMusik360EventScreen(Screen):
 							return streams[len(streams) - 1][1]
 					return streams[int(config.plugins.magentamusik360.stream_quality.value)][1]
 			return ''
-		except:
+		except Exception:
 			return ''
 
 	def playVideo(self, title, url):
@@ -537,7 +501,7 @@ class MagentaMusik360MainScreen(Screen):
 							break
 				if self.version >= rel['tag_name'] or self.updateUrl != '':
 					break
-		except Exception as e:
+		except Exception:
 			pass
 
 	def update(self):
